@@ -1,0 +1,359 @@
+---
+title: "Titanic project"
+author: "NIANG"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup }
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message = FALSE)
+```
+
+
+
+```{r}
+library(tidyverse)
+library(FactoMineR)
+library(knitr)
+library(factoextra)
+setwd("C://Users/abdou/Documents/cours analyse de données/")
+getwd()
+```
+
+
+#### **1. Tableau Titanic**:
+
+```{r}
+Titanic = read.csv(file = "titanic.csv", sep =',' , header = T, stringsAsFactors = TRUE)
+head(Titanic)
+
+```
+
+
+Nous disposons d'un nombre n de personnes présentes sur le Titanic lors de son
+naufrage en pleine mer, de leur age (adulte ou enfant), du sexe ( homme ou femme), de la classe
+(première, deuxième, troisième ou equipage) et de leur statut ( survivant ou décédé).
+
+
+#### **2. Nous allons renommer les modalités** :
+
+
+
+```{r}
+Titanic$Classe = gsub("0", "Crew", Titanic$Classe)
+Titanic$Classe = gsub("1", "1st class", Titanic$Classe)
+Titanic$Classe = gsub("2", "2nd class", Titanic$Classe)
+Titanic$Classe = gsub("3", "3rd class", Titanic$Classe)
+
+Titanic$Age = gsub("0", "Enfants", Titanic$Age)
+Titanic$Age = gsub("1", "Adulte", Titanic$Age)
+
+Titanic$Sexe = gsub("0", "Femme", Titanic$Sexe)
+Titanic$Sexe = gsub("1", "Homme", Titanic$Sexe)
+
+Titanic$Survie = gsub("0", "Décédé", Titanic$Survie)
+Titanic$Survie = gsub("1", "Survivant", Titanic$Survie)
+
+
+
+```
+
+```{r}
+kable(head(Titanic))
+```
+
+
+
+
+
+
+#### **3. Tableau des effectifs croisés** *Classe* **et** *Survie*
+
+*étape 1 : Tableau croisé*
+
+```{r}
+Titanic_CS = table(Titanic$Classe,Titanic$Survie) 
+Titanic_CS
+```
+
+
+
+*étape 2 : Somme par colonne*
+
+```{r}
+Total_c = apply(Titanic_CS,2,sum)
+Total_c
+```
+
+*étape 3 : Ajout de la ligne Total colonne*
+
+```{r}
+Cross_Titanic = rbind(Titanic_CS,Total_c)
+Cross_Titanic
+```
+
+*étape 4 : Somme par lignes*
+
+```{r}
+Total_r = apply(Cross_Titanic, 1, sum)
+Total_r
+```
+
+
+*étape 5 : Ajout de la colonne Total ligne* qui nous donne au final le tableau croisé *Classe* *Survie* suivant :
+```{r}
+Cross_Titanic = cbind(Cross_Titanic,Total_r)
+Cross_Titanic
+```
+
+
+
+
+#### **4. Tableau des effectifs attendus sous hypothèse H0 d'indépendance entre** *Classe* **et** *Survie*
+
+
+```{r}
+N=2201
+```
+
+On sait que sous hypothèse d'indépendance, $\ f_{ij} = f_{i.} f_{.j}$ ce qui équivaut encore à $\ n_{ij} = n_{i.} n_{.j}/N$ avec $\ N$ effectif total : $\ N = \sum_{i=1}^{p} \sum_{i=1}^{q} n_{ij}$ 
+et $\ n_{ij}$ le nombre de personnes avec la modalité $\ i$ de la variable $\ X$  et la modalité $\ j$ de $\ Y$.
+
+
+*Remarque* : Qu'on soit dans le cadre du  tableau des effectifs observés ou le tableau des effectifs attendus sous hypothèse                 d'indépendance, les marges-lignes et marges-colonnes ne changent pas.
+            
+
+En effet, on sait que $\ n_{.j} = \sum_{i=1}^{p} n_{ij}$ 
+
+or sous hypothèse H0 $\ n_{ij} = n_{i.} n_{.j}/N$ donc  $\ n_{.j} = \sum_{i=1}^{p} n_{i.} n_{.j}/N = (n_{.j}/N) \sum_{i=1}^{p} n_{i.} = n_{.j}$.
+
+On peut désormais construire notre tableau des effectifs observés sous hypothèse H0:
+
+
+```{r echo = TRUE}
+
+for(i in 1:4)
+{
+for(j in 1:2)
+{
+
+  Cross_Titanic[i,j] = round((Total_r [i]*Total_c[j])/N,2)
+}
+}
+```
+
+Nous obtenons le tableau suivant alors :
+
+```{r}
+Cross_Titanic
+```
+
+
+
+#### **5. Donner le tableau des effectifs croisés** *Survie* **et** *Age* **grace a table**
+
+*étape 1 : Tableau croisé*
+
+```{r}
+Titanic_SA = table(Titanic$Age,Titanic$Survie) 
+Titanic_SA
+
+
+```
+
+*étape 2 : Somme par colonne*
+
+```{r}
+Total_c1 = apply(Titanic_SA,2,sum)
+Total_c1
+
+```
+
+*étape 3 : Ajout de la ligne Total colonne*
+
+```{r}
+Cross_Titanic_2 = rbind(Titanic_SA,Total_c1)
+Cross_Titanic_2
+
+
+```
+
+*étape 4 : Somme par lignes*
+
+```{r}
+Total_r1 = apply(Cross_Titanic_2, 1, sum)
+Total_r1
+
+
+```
+
+*étape 5 : Ajout de la colonne Total ligne* qui nous donne au final le tableau croisé *Age* *Survie* suivant :
+
+```{r}
+Cross_Titanic_2 = cbind(Cross_Titanic_2,Total_r1)
+Cross_Titanic_2
+```
+
+
+```{r}
+Cross_Titanic_2
+```
+
+
+#### **4. Tableau des effectifs attendus sous hypothèse H0 d'indépendance entre** *Age* **et** *Survie*
+
+
+Par analogie à la question 4, nous avons:
+
+```{r echo=TRUE}
+for(i in 1:2)
+{
+for(j in 1:2)
+{
+
+  Cross_Titanic_2[i,j] = round((Total_r1 [i]*Total_c1[j])/N,2)
+}
+}
+```
+
+Nous obtenons le tableau suivant sous hypothèse d'indépendance
+ 
+```{r}
+Cross_Titanic_2
+```
+
+#### **Peut-on affirmer, au risque de 5%, que les variables** *Classe* **et** *Survie* **sont dépendantes ?** :
+
+Pour celà, faisons un test du Khi2, du tableau correspondant que nous avons appelé ici Titanic_CS :
+
+Si le ***p-value*** < 0.05 alors nous rejeterons l'hypoyhèse H0 d'indépendance
+
+```{r}
+khi0=chisq.test(Titanic_CS)
+khi0
+```
+
+Le ***p-value*** est pratiquement nul. Donc nous rejetons l'hypothèse d'indépendance. Donc les variables *Classe* et *Survie* sont dépendantes.
+
+*Remarque* : Cependant, ce test ne nous permet pas d'analyser les relations spécifiques entre deux variables. Il résume simplement si oui ou non il y'a une                 association.
+
+
+#### **8. Tester l’indépendance des variables** *Sexe* *Survie* **puis** *Age*  *Survie* **Conclure.**
+
+* Pour *Sexe* *Survie*, créons d'abord la table :
+
+```{r}
+Titanic_SS = table(Titanic$Sexe,Titanic$Survie) 
+Titanic_SS
+```
+
+
+
+```{r}
+khi1 = chisq.test(Titanic_SS)
+
+khi1$statistic
+```
+
+Le nombre de degrés de liberté est $\ df = (p-1)(q-1)=1 = \nu$
+
+Si on se fixe un niveau de 5% = 0.05 alors $\ 1-\alpha = 0.950$ et donc nous cherchons $\ \chi_{1}$ tel que $\ \chi_{1} > \chi_{\nu ,1-\alpha}$ avec
+
+$\chi_{\nu ,1-\alpha} = \chi_{1 , 0.950} = 0.00$ par lecture sur le tableau du Khi2
+
+Or $\ \chi_{1} = 454.4998$. Donc on bien $\ \chi_{1} > \chi_{\nu ,1-\alpha}$.
+
+Conclusion : Les variables *Sexe* et *Survie* sont fortement liées. Nous verrons dans l'AFC en quoi elles le sont.
+
+
+
+* Pour *Age* *Survie* :
+*Tableau*
+```{r}
+Titanic_SA
+```
+
+
+```{r}
+khi2 = chisq.test(Titanic_SA)
+khi2$statistic
+```
+
+Pour les memes raisons que plus haut, les variables *Age* *Survie* sont fortement liées.
+
+
+### **9. Réaliser l’AFC des variables classe et survie. Combien d’axes factoriels peut-on choisir ? Interpreter**
+
+D'abord puisque nous avons fait un test du Khi2 ( pour evaluer le lien entre les variables ), nous allons utiliser les attributs de la fonction khi2 pour analyser de plus près ce lien en particulier le *Résidu* qui est la différence entre les effectifs observés et attendus.
+
+```{r}
+khi0$residuals
+```
+
+Nous pouvons dès à présent affirmer qu'il existe une forte attractivité entre *1ère classe* et *Survivant* et une forte répulsion entre *1ère classe* et *Décédé*
+
+Alors que dans le meme temps il une attractivité entre *les membres de l'équipage* et *Décédé* et une répulsion entre *Equipage* et *Survivant*.
+
+
+
+
+```{r}
+res.ca = CA (Titanic_CS, ncp = 5, graph = T)
+res.ca
+```
+
+```{r}
+val_propres = get_eigenvalue(res.ca)
+val_propres
+```
+
+
+On peut voir que le tableau *Classe* et *Survie*  n'a qu'une seule valeur propre qui a elle seule explique 100% de l'information.
+
+
+```{r}
+res.ca$row$contrib
+
+```
+
+On peut remarquer que la contribution de la *1ère classe* à la création de l'axe est de 70% environ, c'est la plus forte.
+Celle de *Equipage* est la deuxième plus forte. 
+
+Donc l'axe oppose les *1ère classe* et *Equipage* du point de vue de la survie.
+
+
+```{r}
+res.ca$col$contrib
+```
+
+De l'autre coté les *Survivants* participent beaucoup à la création de l'axe.
+
+
+Donc l'axe oppose *Décédé* et *Survivant* du point de vue de la classe dans le bateau.
+
+
+
+Conclusion : L'axe oppose les membres de la *1ère classe* qui pour beaucoup ont survécus aux membres de *Equipage* qui sont décédés pour beaucoup.
+
+
+
+```{r}
+res.ca$col$cos2
+
+res.ca$row$cos2
+```
+
+Ici tous les points sont bien représentés.
+
+La représentation se faisant sur un seul axe, nous arreterons notre analyse à la qualité de représentation et à la contribution à l'unique axe factoriel.
+
+
+
+
+
+
+
+
+
+
+

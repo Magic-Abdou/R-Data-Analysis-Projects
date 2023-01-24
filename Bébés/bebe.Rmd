@@ -1,0 +1,467 @@
+---
+title: "Bebes"
+author: "NIANG"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+#### ***Objectif*** :
+
+Déterminer si le poids des bébés varie selon plusieurs critères de la mère comme le poids, l'age, la taille et le comportement vis-à-vis du tabac des mères.
+      
+      
+      
+      
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE,message = FALSE)
+```
+
+
+
+```{r}
+library(tidyverse)
+library(FactoMineR)
+library(knitr)
+library(factoextra)
+setwd("C://Users/abdou/Documents/cours analyse de données/")
+getwd()
+```
+
+
+#### **1. Import fichier bébé dans R**
+
+```{r}
+bebe = read.table( "bebe.txt")
+
+```
+
+
+```{r}
+head(bebe)
+
+```
+#### **2. Histogramme age des mères**
+
+
+Commencons d'abord par une recherche du maximum et du minimum des ages :
+
+```{r}
+a=max(bebe$age)
+a
+b=min(bebe$age)
+b
+```
+
+99 ans nous parait comme un chiffre aberrant. Une grossesse à 15 ans peut etre envisagée sous forme de grossesse précoce donc nous nous séparerons de 99 ans et nous conserverons l'age 15 ans. 
+
+Un boxplot permet de mieux isoler la valeur aberrante 99 ans.
+
+
+```{r}
+library(ggplot2)
+### un corrplot de l'age en fonction du poids (c'est juste dans le but d'isoler la(les) valeur(s) abérrantes
+ggplot(bebe, aes( x=bwt,y=age, fill=bwt)) +
+    geom_boxplot()+ 
+    xlab(label = "poids bebe") +
+    ylab(label = "age parent") +
+    theme(axis.text.x = element_text(angle=30, hjust=1, vjust=1))+
+    theme(legend.position="none")+
+    ggtitle("Exemple de boxplots sur les données bebe") 
+```
+
+
+On voit bien que l'age 99 ans est un outlier. Les autres valeurs au delà du 3ème quartile de la moustache sont envisageables comme ages de grossesse (grossesses pour age entre [40,50[)
+
+Nous faisons le choix de conserver des ages entre 15 et 50 max.
+
+```{r}
+bebe=subset(bebe,bebe$age < 50)
+
+```
+
+Nous obtenons l'histogramme suivant:
+
+```{r}
+hist(bebe$age, breaks=seq(0,100,by=5),labels = T,col = 'orange' ,main ="Histogramme \n de l'age des mères", xlab = 'Age de la mère en années',ylab='Frequence', xlim =c(0,60),ylim=c(0,500),las=1)
+```
+  
+  
+  
+Nous remarquons les naissances sont généralement concentrées sur la période 20 à 30 ans. Quelques rares cas de naissances au delà de 40 ans (26) et une naissance à 15 ans, l'age minimum ici.
+
+Par ailleurs si on superposait la courbe de la loi normale a notre histogramme nous aurions ceci :
+
+```{r}
+h= hist(bebe$age,  col="orange", xlab="age meres",ylab='Fréquence', ylim=c(0,500),xlim=c(0,70), labels=T,breaks=seq(0,100,by=5),
+   main="Histogramme avec courbe normale")
+xfit<-seq(min(bebe$age),max(bebe$age),length=50)
+yfit<-dnorm(xfit,mean=mean(bebe$age),sd=sd(bebe$age))
+yfit <- yfit*diff(h$mids[1:2])*length(bebe$age)
+lines(xfit, yfit, col="blue", lwd=3)
+```
+
+
+On voit bien que la distribution de la variable age des mères est similaire à celle d'une loi normale.
+
+#### **3. Histogramme poids des bébés**
+
+
+```{r}
+
+hist(bebe$bwt,main = 'Histogramme\n poids des bébés',col='blue',breaks=10, ylim=c(0,500), xlim=c(0,10),xlab = 'Poids du bébé \n à la naissance en kg ',ylab='Frequence')
+
+```
+
+
+ Les histogrammes peuvent etre une méthode peu efficace pour déterminer la forme d'une distribution parce qu'ils sont fortement affectés par le nombre de breaks qu'on utlise ( si je change la taille de mon break, la forme de la distribution évolue ). D'ou l'interet de faire un tracé de l'estimation de la densité.
+
+
+#### **4. Tracé de l'estimation densité poids des bébés :**
+
+
+
+```{r}
+d= density(bebe$bwt)
+plot(d, main="Estimation de la densité du poids des bébés")
+polygon(d, col="red", border="blue")
+```
+
+
+Elle est similaire à la densité de la distribution d'une loi normale. 
+
+
+
+#### **5. Etude graphique du poids des mères :**
+
+
+
+```{r}
+plot(bebe$weight, ylab = 'Poids des mères en Kg', main = 'Graphique\n poids des mères', las=1)
+```
+
+
+Les poids sont globalement dans un meme intervalle sauf une petite partie qui est proche des 1000kg.
+
+
+```{r}
+hist(bebe$weight,col = 'orange', breaks =100 ,main ="Histogramme \n poids des meres", xlab = 'Poids en Kg',ylab='Frequence', xlim =c(0,1000),ylim=c(0,400),las=1)
+
+```
+
+
+
+Nous pouvons voir ainsi que les poids atteignant des valeurs proches de 1000kg sont aberrantes. Nous allons choisir un intervalles de poids raisonnables et éliminer celles qui dépassent. Nous choisirons tous les poids ne dépassant pas 120kg :
+
+```{r}
+bebe =subset(bebe, bebe$weight < 120)
+min(bebe$weight)
+```
+
+
+39.41 correspond au minimum des poids mères     
+
+
+```{r}
+hist(bebe$weight[bebe$weight >=38  & bebe$weight < 100], breaks=seq(0,100,by=5),col = 'green' ,main ="Histogramme \n poids des mères", xlab = 'Poids de la mère en années',ylab='Frequence', xlim =c(0,130),ylim=c(0,300),las=1)
+
+```
+
+
+
+```{r}
+h= hist(bebe$weight, col="red", xlab = "Poids meres", ylab='Fréquence', ylim=c(0,300),xlim = c(0,120),
+   main="Histogramme avec courbe normale")
+xfit<-seq(min(bebe$weight),max(bebe$weight),length=50)
+yfit<-dnorm(xfit,mean=mean(bebe$weight),sd=sd(bebe$weight))
+yfit <- yfit*diff(h$mids[1:2])*length(bebe$weight)
+lines(xfit, yfit, col="blue", lwd=3)
+```
+
+On peut remarquer que si le poids des bébés semble proche d'une loi normale, celle des mères s'en éloigne.
+
+
+#### **6. Etude graphique de la relation entre les poids mères et bébés**
+
+
+
+```{r}
+x = bebe$weight #notre variable explicative
+y = bebe$bwt    #notre variable expliquée
+
+# Tracé + droite de regression
+plot(x, y, main = "Tracé poids des bébés \n en fonction du poids des mères",
+     xlab = "poids des mères", ylab = "Poids des bébés",las=1,
+     pch = 19, frame = FALSE)
+abline(lm(y ~ x, data=bebe), col = "red", xlim=c(0,150),ylim =c(0,10))
+
+```
+
+
+On devine qu'il y'a une relation entre poids mères et poids bébés. Un intervalle *poids des mères* entre [50kg,70kg] dans lequel le poids des bébés varie entre[2.5kg,4kg] et des valeurs en dehors de l'intervalle ou l'évolution est très dispersée. Nous ne pouvons pas conclure de liaison car elle n'est pas très claire.
+
+
+```{r}
+cor(bebe$bwt,bebe$weight)
+```
+
+
+La valeur de la corrélation entre poids des bébés et poids des mères est très faible.
+
+
+
+#### **7. Création des classes poids de la mère et poids des enfants**
+
+Nous avons créé un tableau croisé des effectifs poids mères/bébés :
+
+```{r}
+
+weightClass = cut(bebe$weight, breaks = c(0, 50, 60, 70, 120), include.lowest=FALSE)
+
+bwtClass = cut(bebe$bwt, breaks = c(0, 3, 3.5, 4, 6), include.lowest=FALSE)
+
+
+
+bwt_weight_Cross = table(bwtClass,weightClass)
+kable(bwt_weight_Cross)
+```
+
+
+
+#### **8. Test d'indépendance du Khi2 entre** *bwtClass* **et** *weightClass*
+
+Test d'indépendance du Khi2 au niveau 0.001 :
+
+```{r}
+khi2=chisq.test(bwt_weight_Cross)
+khi2
+```
+
+
+
+
+La p-value < 0.001%. On peut donc rejeter l'hypothèse d'indépendance. C'est à dire il existe une liaison forte entre *bwtClass* et *weightClass*
+
+***NB :*** On peut regarder les ecarts à l'indépendance : Cet écart à l’indépendance représente l’écart entre l’effectif observé et l’effectif théorique, et              ceci pour chacune des cases du tableau de contingence.
+
+
+```{r}
+khi2$residuals
+```
+
+
+
+On peut remarquer que l'ecart à l'indépendance entre les modalités (0,50] et (0,3] est positif. Il correspond donc à une attraction entre les deux modalités.
+
+Alors que les modalités  (3.5,4] et (0,50]  s'opposent. 
+
+Les autres attractions oppositions ne sont pas fortes.
+
+#### **9. AFC poids entre les poids de la mère et du bébé**
+
+
+*AFC*
+
+
+```{r}
+res.ca = CA(bwt_weight_Cross, graph = F)
+res.ca
+```
+
+
+##### *Valeurs propres*
+
+
+```{r}
+vp=get_eigenvalue(res.ca)
+vp
+
+somme = apply(vp,2,sum)
+
+```
+
+
+
+Il y'a 3 valeurs propres. La première explique 82.5% de l'information.
+
+Nous choisissons de conserver un seul axe par la règle du seuil, ***82.5%*** nous semblant un pourcentage acceptable pour expliquer l'information totale.
+
+Il est également possible de calculer une valeur propre moyenne au-dessus de laquelle l’axe doit être conservé dans le résultat:
+
+Selon le graphique ci-dessus, seule la dimensions 1 doit être considérée pour l’interprétation de la solution. Les dimensions 2 et 3 expliquent seulement 17,4% de l’inertie totale, ce qui est inférieur à la valeur moyenne des axes (33,33%) et trop petit pour être conservé pour une analyse plus approfondie.
+```{r}
+print('la somme des valeurs propres est :')
+somme[1]
+```
+
+
+```{r}
+fviz_screeplot (res.ca) +
+  geom_hline (yintercept = 33, linetype = 2, color = "red")
+```
+
+
+*NB :* La valeur propre ou inertie mesurant l'intensité de la liaison, on peut dire qu'elle est très faible ici : en effet $\ \sum \lambda_{i}$ =  0.03100034         <<3 . La liaison ici n'est pas intense.
+
+
+***Biplot***
+
+
+```{r}
+fviz_ca_biplot (res.ca, repel = TRUE)
+```
+
+On remarque qu'il y'a une forte attractivié entre l'intervalle (0,3] et l'intervalle [0,50]. Donc ces deux profils colonne et ligne s'associent le plus.
+
+On ne peut interpreter cette proximité si ce n'est dire que les profils colonne sont du coté des profils lignes auxquels ils s'associent le plus.
+
+
+###### *Graphique des points lignes*
+
+```{r}
+res.ca$row$coord
+```
+
+
+```{r}
+fviz_ca_row (res.ca, col.row = "steelblue", shape.row = 15)
+```
+
+
+Ici nous n'avons pas de points regroupés donc il n'y a pas de profils-lignes aux comportements similaires.
+
+Les intervalles (0,3] et (4,6] sont correlés negativement car opposés par rapport à l’origine du graphique (quadrants opposés).
+
+Meme chose pour les intervalles  (3.5,4] et(4,6].
+
+La distance (3,3.5] à l'origine étant petite, nous pouvons déjà le considérer pas très bien représenté sur l'axe 1.
+
+
+
+###### *Qualité de représentation des lignes*
+
+```{r}
+res.ca$row$cos2
+```
+
+
+*Visualisation rapide*
+
+
+```{r}
+fviz_ca_row (res.ca, col.row = "cos2",
+             gradient.cols = c ("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+```
+
+
+Les intervalles sont tous bien représentés sur l'axe 1 sauf l'intervalle (3,3.5] comme on l'avait anticipé.
+
+
+
+###### *Contribution des lignes à la dimension 1*
+
+Il y'a 4 catégories de poids de bébé. Donc le seuil envisagé est donc à 25% de contribution à l’inertie du premier axe
+On peut ensuite obtenir les indivus dont la contribution est supérieure à la contribution moyenne :
+Les contributions à l'axe 1 sont (en pourcentage) :
+
+```{r}
+kable(res.ca$row$contrib [,1])
+
+```
+
+
+
+On peut mieux le voir ici :
+
+```{r}
+fviz_contrib(res.ca, choice = "row", axes = 1)
+```
+
+Les intervalles (0,3] , (4,6] et (3.5,4] ont une contribution supérieure à la moyenne (La droite en pointillés rouges, sur le graphique ci-dessus, indique la valeur moyenne attendue)
+
+```{r}
+fviz_ca_row (res.ca, col.row = "contrib",
+             gradient.cols = c ("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+```
+
+ 
+ Il est évident que les catégories (4,6] et (3.5,4] ont une contribution importante au pôle positif de la première dimension, tandis que la catégorie (0,3] une contribution majeure au pôle négatif de la première dimension.
+
+En d’autres termes, la dimension 1 est principalement définie par l’opposition (4,6] et (3.5,4] (pôle positif) avec [0,3] (pôle positif).
+
+
+
+
+###### *Graphique des colonnes*
+
+```{r}
+fviz_ca_col (res.ca, col.col = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE)
+```
+
+
+Tous les profils-colonnes sont très bien représentés sur l'axe (1,2). Essayons de voir leur qualité de représentation sur l'axe 1 d'étude.
+
+
+
+```{r}
+fviz_cos2 (res.ca, choice = "col", axes = 1)
+```
+
+
+Le profil (0,50] est très bien représenté sur l'axe 1. Les profils (70,120] et (60,70] aussi dans une moindre mesure.
+
+Seul le profil (50,60] n'est pas bien représenté. Donc son interprétation doit etre faite avec prudence.
+
+```{r}
+fviz_ca_col (res.ca, col.row = "steelblue", shape.row = 15)
+```
+
+On peut voir que les profils-colonnes (60,70] et (70,120] sont très proches  ( avec bonne qualité de représentation) et que ce petit groupe est très eloigné du profil-colonne (0,50].
+
+On peut dire que (60,70] et (70,120] ont des comportements similaires. Les femmes de cet intervalles donnent naissance à des enfants aux poids à peu près similaires. On l'a vu grace au biplot.
+
+Alors que les enfants issus de parents dont les poids sont dans l'intervalle (0,50] ont des enfants dont les poids sont dans l'intervalle [0,3].
+
+On ne peut pas s'exprimer clairement sur le comportement des personnes sur l'intervalle (50,60] dans la mesure ou il mal représenté sur l'axe 1.
+
+
+#### ***Conclusion*** :  Essayons une afc sous l'hypothèse H0 d'indépendance
+       
+
+```{r}
+ca_indep = CA(khi2$expected, graph = T)
+ca_indep
+```
+
+
+
+La représentation peut porter à confusion mais on peut voir que les points sont tous quasiments confondus avec le centre de gravité (les ordres de grandeur sont en 0.0000 quand on regarde l'echelle ). 
+
+Ceci n'apporte rien à notre analyse si ce n'est que nous avons bien fait un test du Khi2 avant sinon l'AFC n'est pas utile.
+
+
+
+
+
+```{r}
+n=sum(bwt_weight_Cross); gc=apply(bwt_weight_Cross,2,sum)/n; gr=apply(bwt_weight_Cross,1,sum)/n 
+# Métriques
+Dr=diag(gr); Dc=diag(gc)
+Dr1=diag(1/gr); Dc1=diag(1/gc)
+# Profils lignes et colonnes
+Xcol=t(bwt_weight_Cross)%*%Dr1/n; Xrow= bwt_weight_Cross%*%Dc1/n
+
+```
+
+
+
+
+
+
+
